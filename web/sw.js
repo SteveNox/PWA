@@ -5,13 +5,13 @@ self.addEventListener('install', function(event) {
 });
 
 self.addEventListener('activate', function(event) {
-    console.log('[SW]: Service worker activating, aber sowas von, jetzt aber echt...', event);
+    console.log('[SW]: Service worker activating...', event);
     //ask the client to take control over the service worker
     return self.clients.claim();
 });
 
 self.addEventListener('fetch', function(event) {
-     console.log('[SW]: Service worker fetching, really? Oh yes...', event);
+     console.log('[SW]: Service worker fetching...', event);
 });
 
 self.addEventListener('sync', function(event) {
