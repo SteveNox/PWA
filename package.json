@@ -1,0 +1,23 @@
+{
+  "name": "pwa",
+  "version": "1.0.0",
+  "description": "WIFI PWA Lehrgang",
+  "main": "index.js",
+  "scripts": {
+    "start": "http-server ./web -c-1",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SteveNox/PWA.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SteveNox/PWA/issues"
+  },
+  "homepage": "https://github.com/SteveNox/PWA#readme",
+  "dependencies": {
+    "http-server": "^14.1.1"
+  }
+}

@@ -4,4 +4,4 @@ if('serviceWorker' in navigator) {
         .then(function() {
             console.log('SERVICE WORKER registerd!');
         });
-}
+};
