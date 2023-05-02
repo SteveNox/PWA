@@ -1,7 +1,11 @@
-//clean up 
+importScripts('/js/idb.js');
+importScripts('/js/helper.js');
+
 //whenever content is changed, change the cache name variables below
-var CACHE_STATIC_NAME = 'static-v32'
-var CACHE_DYNAMIC_NAME = 'dynamic-v32'
+const CACHE_STATIC_NAME = 'static-v32';
+const CACHE_DYNAMIC_NAME = 'dynamic-v32';
+const API_URL = 'http://localhost:24881/bestellung';
+const DB_CACHE_NAME = 'orders';
 
 self.addEventListener('activate', function(event) {
     console.log('[SW]: Service worker activating, aber sowas von, jetzt aber echt...', event);
@@ -30,6 +34,8 @@ self.addEventListener('install', function(event) {
                     'index.html',
                     'offline.html',
                     'js/app.js',
+                    '/js/idb.js',
+                    '/js/helper.js',
                     "js/orderentries.js",
                     "css/bootstrap.min.css",
                     "js/bootstrap.min.js"
@@ -39,22 +45,34 @@ self.addEventListener('install', function(event) {
 });
 
 
-//extension to cache then network in damagelog.js
+//extension to cache then network in orderentries.js
 self.addEventListener('fetch', function(event) {
-    console.log('[SW]: Service worker fetching...', event);
-    //var url = 'https://pwademo-66c7b-default-rtdb.europe-west1.firebasedatabase.app/damagelog.json';
-    var url = "http://localhost:24881/bestellung";
-    
-    if (event.request.url.indexOf(url) > -1) {
+    // console.log('[SW]: Service worker fetching...', event);
+
+    if (event.request.url.indexOf(API_URL) > -1) {
         event.respondWith(
-            caches.open(CACHE_DYNAMIC_NAME)
-                .then(function(cache) {
-                    return fetch(event.request)
-                        .then(function(res) {
-                            cache.put(event.request, res.clone());
-                            return res;
+            fetch(event.request)
+            .then(function(res) {
+                //cache.put(event.request, res.clone()); <--store db response in cache
+                var clonedResponse = res.clone();
+                clearAllData(DB_CACHE_NAME)
+                    	.then(function() 
+                        {
+                            return clonedResponse.json()
+                        })
+                        .then(function(data) {
+                            console.log("DATA->", data);
+                            for (var key in data)
+                            {
+                                writeData(DB_CACHE_NAME, data[key]);
+                                // console.log(data[key]);
+                            }                       
                         });
-                })
+                return res;
+            })
+            .catch(function(err) {
+                //prevent red line in console
+            })
         );
     } else {
         event.respondWith(
@@ -79,4 +97,37 @@ self.addEventListener('fetch', function(event) {
             })
         );
     }
+});
+
+self.addEventListener('sync', function(event) {
+    console.log('[SW]: Service worker syncing...', event);
+    if (event.tag == 'sync-new-order') {
+        event.waitUntil
+        (
+            readAllData('sync-orders')
+                .then(function(data) 
+                {
+                    for (var dt of data) {
+                        var newItem = {
+                            besteller: dt.besteller,
+                            lieferant: dt.lieferant,
+                            bestellungsinhalt: dt.bestellungsinhalt,
+                            lieferadresse: dt.lieferadresse,
+                        }
+                        fetch(API_URL, 
+                            {
+                                method: "POST", 
+                                body: JSON.stringify(newItem), 
+                                headers: {"Content-type": "application/json; charset=UTF-8", 'Accept': 'application/json'}
+                            })
+                        .then(function(res) {
+                                //console.log('SENT DATA:', res);
+                                if(res.ok) {
+                                  deleteItemFromData('sync-orders', dt.key);
+                                }
+                            });
+                    }
+                })
+        );
+     }
 });

@@ -1,5 +1,6 @@
-const dbUrl = "https://pwademo-66c7b-default-rtdb.europe-west1.firebasedatabase.app/damagelog";
 const apiUrl = "http://localhost:24881/bestellung"
+const DB_CACHE_NAME = 'orders';
+
 var logger = {
   log: (aMessage) => {
     isLogging = true;
@@ -22,11 +23,12 @@ var loglist = {
   init : () => {
     loglist.inputForm = document.getElementById('orderForm');
     loglist.addButton = document.getElementById('list-add');
+    
     loglist.besteller = document.getElementById('besteller');
     loglist.lieferant = document.getElementById('lieferant');
     loglist.lieferadresse = document.getElementById('lieferadresse');
     loglist.bestellungsinhalt = document.getElementById('bestellungsinhalt');
-
+    loglist.key = Date.now().toString(36) + Math.random().toString(36);
     loglist.inputForm.onsubmit = loglist.add;
     loglist.addButton.disabled = false;
 
@@ -47,47 +49,63 @@ var loglist = {
       });    
 
     //network cache racing
-    if ('caches' in window) {
-      caches.match(apiUrl)
-        .then(function(response) {
-          if (response) {
-            return response.json();
-          }
-        })
+    if('indexedDB' in window) {
+      readAllData('orders')
         .then(function(data) {
           if(!networkDataReceived) {
             loglist.items = [];
             for (var key in data) {
               loglist.items.push({key: key, besteller: data[key].besteller, lieferant: data[key].lieferant, lieferadresse: data[key].lieferadresse, bestellungsinhalt: data[key].bestellungsinhalt}); 
+             }
+            console.log("from indexedDB", loglist.items);
+            loglist.draw();
           }
-          console.log("from cache", loglist.items);
-          loglist.draw();
-        }
-        });
+        })
     }
-
-
   },
 
   add : (evt) => {
     evt.preventDefault();
     
     var newItem = {
+      bestellungid: Date.now().toString(36) + Math.random().toString(36).substring(2),
       besteller: loglist.besteller.value,
       lieferant: loglist.lieferant.value,
       lieferadresse: loglist.lieferadresse.value,
       bestellungsinhalt: loglist.bestellungsinhalt.value
     }
 
-    fetch(apiUrl, {
-      method: "POST", 
-      body: JSON.stringify(newItem), 
-      headers: {"Content-type": "application/json; charset=UTF-8"}
-    })
-    .then(function() {
-        loglist.items.push(newItem);
-        loglist.draw();
-    });
+    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+      navigator.serviceWorker.ready
+        .then(function(sw) {
+            writeData('sync-orders', newItem)
+            .then(function() {
+              sw.sync.register('sync-new-order');
+            })
+            .then(function() {
+              //show toast or so on
+              writeData('orders', newItem);
+              loglist.items.push(newItem);
+              loglist.draw();
+            })
+            .catch(function(err) {
+              // console.log(err);
+            })
+        });
+    } else {
+      fetch(apiUrl, {
+        method: "POST", 
+        body: JSON.stringify(newItem), 
+        headers: {"Content-type": "application/json; charset=UTF-8", 'Accept': 'application/json'}
+      })
+      .then(function() {
+          loglist.items.push(newItem);
+          loglist.draw();
+      })
+      .catch(function(err) {
+        //prevent red line in console
+      });
+    }
   },
 
   delete : (id) => { if (confirm("Remove this item?")) {
