@@ -1,83 +1,82 @@
-const STATIC_CACHE_NAME = 'static';
-const DYNAMIC_CACHE_NAME = 'dynamic';
-const CACHE_VERSION = "v4";
-const STATIC_CACHE_CONTENT = ['/', 'index.html', 'offline.html', '/js/app.js', 'manifest.json'];
+//clean up 
+//whenever content is changed, change the cache name variables below
+var CACHE_STATIC_NAME = 'static-v32'
+var CACHE_DYNAMIC_NAME = 'dynamic-v32'
 
-
-self.addEventListener('install', event => {
-    event.waitUntil(install());
-  });
-  
-  async function install() {
-    const cache = await caches.open(STATIC_CACHE_NAME + CACHE_VERSION);
-    return cache.addAll(STATIC_CACHE_CONTENT);
-  }
-
-self.addEventListener('activate', event => {
-    event.waitUntil(activate());
-});
-
-async function activate() {
-    const keys = await caches.keys();
-    return Promise.all(
-      keys.map(key => {
-        if (!key.endsWith(CACHE_VERSION)) return caches.delete(key);
-      })
+self.addEventListener('activate', function(event) {
+    console.log('[SW]: Service worker activating, aber sowas von, jetzt aber echt...', event);
+    event.waitUntil(
+        caches.keys()
+            .then(function(keyList) {
+                return Promise.all(keyList.map(function(key) {
+                    if (key !== CACHE_STATIC_NAME && key !== CACHE_DYNAMIC_NAME) {
+                        console.log('[SW]: Removing old cache.', key);
+                        return caches.delete(key);
+                    }
+                })); //takes array of promises and waits until finished
+            })
     );
-  }
-
-self.addEventListener('fetch', event =>
-  event.waitUntil(cacheOnly(event.request))
-);
-
-const networkOnly = async (request) => {
-    return fetch(request);
-  };
-
-const cacheOnly = async (request) => {
-    const responseFromCache = await caches.match(request);
-    if (responseFromCache) {
-      return responseFromCache;
-    }
-  };
-
-const cacheFirstThenNetwork = async (request) => {
-    const responseFromCache = await caches.match(request);
-    if (responseFromCache) {
-      return responseFromCache;
-    }
-
-    try {
-        const responseFromWeb = await fetch(request);
-        return await cacheDynamically(request, responseFromWeb.clone());
-    } catch (error) {
-        return cacheOnly("offline.html");
-    }
-  };
-
-const networkFirstThenCache = async (request) => {
-    try {
-        const responseFromWeb = await fetch(request);
-        return await cacheDynamically(request, responseFromWeb.clone());
-    } catch (error) {
-        const responseFromCache = await caches.match(request);
-        if(responseFromCache) {
-            return responseFromCache;
-        }
-    }
-  };  
-
-const cacheDynamically = async (request, response) => {
-    var responseFromCache = await caches.match(request)
-    if(responseFromCache === null || responseFromCache === undefined) {
-        var dynamicCache = await caches.open(DYNAMIC_CACHE_NAME+CACHE_VERSION);
-        dynamicCache.put(request.url, response);   
-    }
-    return response;
-}
-
-self.addEventListener('sync', function(event) {
-    //console.log('[SW]: Service worker syncing...', event);
-
+    return self.clients.claim();
 });
 
+self.addEventListener('install', function(event) {
+    console.log('[SW]: Service worker installing...', event);
+    event.waitUntil( //won't finish until caching is complete
+        caches.open(CACHE_STATIC_NAME)
+            .then(function(cache) {
+                console.log('[SW]: Precaching app shell...', event);
+                cache.addAll([
+                    '/',
+                    'index.html',
+                    'offline.html',
+                    'js/app.js',
+                    "js/orderentries.js",
+                    "css/bootstrap.min.css",
+                    "js/bootstrap.min.js"
+                ]);
+            })
+    )
+});
+
+
+//extension to cache then network in damagelog.js
+self.addEventListener('fetch', function(event) {
+    console.log('[SW]: Service worker fetching...', event);
+    //var url = 'https://pwademo-66c7b-default-rtdb.europe-west1.firebasedatabase.app/damagelog.json';
+    var url = "http://localhost:24881/bestellung";
+    
+    if (event.request.url.indexOf(url) > -1) {
+        event.respondWith(
+            caches.open(CACHE_DYNAMIC_NAME)
+                .then(function(cache) {
+                    return fetch(event.request)
+                        .then(function(res) {
+                            cache.put(event.request, res.clone());
+                            return res;
+                        });
+                })
+        );
+    } else {
+        event.respondWith(
+            caches.match(event.request)
+                .then(function(response){
+                    if (response) {
+                        return response; //response comes from the cache
+                    } else {
+                        return fetch(event.request) //not cached, get from internet...
+                                .then(function(dynamicResponse) { //and place it into dynamic cache
+                                caches.open(CACHE_DYNAMIC_NAME)
+                                    .then(function(cache) {
+                                        cache.put(event.request.url, dynamicResponse.clone()) 
+                                        //does not send request, uses response (can be done only once), and is therefore cloned
+                                        //to respond back to the browser (clone is stored in cache, rest is shown)
+                                        return dynamicResponse;
+                                    })
+                            })
+                            .catch(function(error) { //do not throw exception when fetching fails
+                            });
+                    }
+            })
+        );
+    }
+});
