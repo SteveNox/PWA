@@ -109,6 +109,7 @@ self.addEventListener('sync', function(event) {
                 {
                     for (var dt of data) {
                         var newItem = {
+                            key: dt.key,
                             besteller: dt.besteller,
                             lieferant: dt.lieferant,
                             bestellungsinhalt: dt.bestellungsinhalt,
@@ -123,7 +124,7 @@ self.addEventListener('sync', function(event) {
                         .then(function(res) {
                                 //console.log('SENT DATA:', res);
                                 if(res.ok) {
-                                  deleteItemFromData('sync-orders', dt.key);
+                                  deleteItemFromData('sync-orders', dt.bestellungid);
                                 }
                             });
                     }
