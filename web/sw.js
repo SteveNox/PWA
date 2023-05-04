@@ -2,14 +2,24 @@ importScripts('/js/idb.js');
 importScripts('/js/helper.js');
 
 //whenever content is changed, change the cache name variables below
-const CACHE_STATIC_NAME = 'static-v32';
-const CACHE_DYNAMIC_NAME = 'dynamic-v32';
+const CACHE_STATIC_NAME = 'static-v33';
+const CACHE_DYNAMIC_NAME = 'dynamic-v33';
 const API_URL = 'http://localhost:24881/bestellung';
 const DB_CACHE_NAME = 'orders';
 
 self.addEventListener('activate', function(event) {
     console.log('[SW]: Service worker activating, aber sowas von, jetzt aber echt...', event);
+    var vapidPublicKey = 'BBCAhxasZgyyU0hb2Q3Aisd68AdHOviZkNR3HMy1r1nvkZCNJL9Xkb0ykr-TYIVUHy3WftdEZbGn-evuWD7bd9I'
+    var convertedVapidPublicKey = urlBase64ToUint8Array(vapidPublicKey);   
+    const options = {      
+        userVisibleOnly: true, //push notifications are only visible to the user
+        applicationServerKey: convertedVapidPublicKey
+    }
+        self.registration.pushManager.subscribe(options).then(function(subscription) {
+            console.log(JSON.stringify(subscription))
+        });
     event.waitUntil(
+
         caches.keys()
             .then(function(keyList) {
                 return Promise.all(keyList.map(function(key) {
@@ -132,3 +142,66 @@ self.addEventListener('sync', function(event) {
         );
      }
 });
+
+//handle notification actions
+//telemetry monitoring
+self.addEventListener('notificationclick', function(event) {
+    var notification = event.notification;
+    var action = event.action;
+    
+    console.log(notification);
+
+    if (action === 'confirm') {
+        console.log("confirmed");
+        notification.close();
+    } else {
+        console.log(action);
+        notification.close();
+    }
+});
+
+self.addEventListener('notificationclose', function(event) {
+    console.log('notification was closed');
+});
+
+self.addEventListener('push', function(event) {
+    console.log('Push Notification received', event);
+    var data = { title: 'New!', content: 'Something new happened!' }
+    if (event.data) {
+        data = JSON.parse(event.data.text());
+    }
+
+    var options = {
+        body: 'You have successfully subscribed to the Notification Service!',
+        icon: '/images/icons/icon-96x96.png',
+        image: '/images/icons/icon-512x512.png',
+        dir: 'ltr',
+        lang: 'en-US',
+        vibrate: [100, 50, 200],
+        badge: '/images/icons/icon-96x96.png',
+        //no renotification
+        tag: 'confirm-notification',
+        renotify: true,
+        actions: [
+          { action: 'confirm', title: 'OK!', icon: '/images/icons/icon-96x96.png' },
+          { action: 'cancel', title: 'CANCEL!', icon: '/images/icons/icon-96x96.png' }
+        ]
+      };
+      event.waitUntil(
+        self.registration.showNotification(data.title, options)
+      );
+})
+
+function urlBase64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+    var rawData = atob(base64);
+    var outputArray = new Uint8Array(rawData.length);
+
+    for (var i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}

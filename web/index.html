@@ -7,8 +7,9 @@
 
     <link rel="manifest" href="manifest.json">
     <!-- Bootstrap CSS -->
+    
     <link href="css/bootstrap.min.css" rel="stylesheet">
-
+    <link href="css/app.css" rel="stylesheet">
     <title>Bestellungen</title>
   </head>
   <body>
@@ -27,21 +28,22 @@
             <li class="nav-item">
               <a class="nav-link" href="/imprint.html">Impressum</a>
             </li>
+              <button class="btn btn-sm btn-outline-secondary" type="button" id="message-request">Nachrichten erlauben</button>
         </div>
       </div>
     </nav>
     
     <div class="container">
+      <div class="row">
       <form id="orderForm">
-            <input type="text" class="form-control" id="bestellungid" />
+            <input type="hidden" class="form-control" id="bestellungid" />
             <input type="text" class="form-control" id="besteller" placeholder="Besteller" required />
             <input type="text" class="form-control" id="lieferant" placeholder="Lieferant" required />
             <input type="text" class="form-control" id="lieferadresse" placeholder="Lieferadresse" required />
-            <input type="text" class="form-control" id="bestellungsinhalt" placeholder="Bestellungsinhalt"/>
+            <textarea class="form-control" id="bestellungsinhalt" placeholder="Bestellungsinhalt"></textarea>
             <button type="submit" id="list-add" class="btn btn-primary mb-3">ADD</button>
-          </div>
-        </div>
       </form>
+    </div>
     </div>
 
     <div class="container text-center">

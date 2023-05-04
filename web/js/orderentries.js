@@ -15,6 +15,7 @@ var loglist = {
   items : [],   // current loglist  list
   inputForm: null,
   addButton: null,
+  messageButton: null,
   reportedAt: null, 
   licensePlate: null, 
   description: null, 
@@ -24,6 +25,8 @@ var loglist = {
     loglist.inputForm = document.getElementById('orderForm');
     loglist.addButton = document.getElementById('list-add');
     
+    loglist.messageButton = document.getElementById('message-request');
+
     loglist.besteller = document.getElementById('besteller');
     loglist.lieferant = document.getElementById('lieferant');
     loglist.lieferadresse = document.getElementById('lieferadresse');
@@ -31,6 +34,12 @@ var loglist = {
     loglist.key = Date.now().toString(36) + Math.random().toString(36);
     loglist.inputForm.onsubmit = loglist.add;
     loglist.addButton.disabled = false;
+    
+    if ('Notification' in window) {
+    //if ('Notification' in window && 'serviceWorker' in navigator) { //for push
+      loglist.messageButton.style.display='inline-block';
+      loglist.messageButton.addEventListener('click', askForNotificationPermission);
+    }
 
 
     var networkDataReceived = false;
@@ -168,4 +177,86 @@ var loglist = {
     }
   }
 };
+
+
+function askForNotificationPermission() {
+  Notification.requestPermission(function(result) {
+    console.log('User choice', result);
+    if (result !== 'granted') {
+      console.log('No permission granted');
+    } else {
+      //displayConfirmNotification();
+      configurePushSubscription();
+    }
+  });
+}
+
+function displayConfirmNotification() {
+  // variante 1
+  // var options = {
+  //   body: 'You have successfully subscribed to the Notification Service!'
+  // };
+  
+  if ('serviceWorker' in navigator) {
+    var options = {
+      body: 'You have successfully subscribed to the Notification Service!',
+      icon: '/images/icons/icon-96x96.png',
+      image: '/images/icons/icon-512x512.png',
+      dir: 'ltr',
+      lang: 'en-US',
+      vibrate: [100, 50, 200],
+      badge: '/images/icons/icon-96x96.png',
+      //no renotification
+      tag: 'confirm-notification',
+      renotify: true,
+      actions: [
+        { action: 'confirm', title: 'OK!', icon: '/images/icons/icon-96x96.png' },
+        { action: 'cancel', title: 'CANCEL!', icon: '/images/icons/icon-96x96.png' }
+      ]
+    };
+    navigator.serviceWorker.ready
+      .then(function(sw) {
+        sw.showNotification('Successfully subscribed from sw', options);
+    });
+  }
+}
+  function configurePushSubscription() {
+    if (!('serviceWorker' in navigator)) {
+      return;
+    }
+
+    var swreg;
+
+    navigator.serviceWorker.ready
+      .then(function(sw) {
+          swreg = sw;
+          sw.pushManager.getSubscription(); //will return existing subscriptions
+      })
+      .then(function(subscription) {
+        //checks subscription for this browser on this device
+        if (subscription === null) {
+          //create new sub
+          //from web-push generate-vapid-keys 
+          var vapidPublicKey = 'BBCAhxasZgyyU0hb2Q3Aisd68AdHOviZkNR3HMy1r1nvkZCNJL9Xkb0ykr-TYIVUHy3WftdEZbGn-evuWD7bd9I'
+          var convertedVapidPublicKey = urlBase64ToUint8Array(vapidPublicKey);
+
+          swreg.pushManager.subscribe({
+            userVisibleOnly: true, //push notifications are only visible to the user
+            applicationServerKey: convertedVapidPublicKey
+          });
+        } else {
+          //use existing
+        }
+      })
+      .then(function(newSub) {
+        //save to server
+        //fetch with post on backend JSON.stringify(newSub)
+      })
+      .then(function(response) {
+        if(response && response.ok)
+          displayConfirmNotification();
+      });
+  // new Notification('Successfully subscribed', options);
+  }
+
 window.addEventListener("load", loglist.init);

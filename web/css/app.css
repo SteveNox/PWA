@@ -1,27 +1,3 @@
-.bg-wifi-green {
-  background-color: #390;
+#message-request {
+  display:none;
 }
-
-main {
-  height: calc(100% - 185px);
-  overflow-y: scroll;
-  background-color: #efefef;
-}
-
-.btn-action {
-  padding: 0.5rem;
-}
-
-.element-clickable {
-  cursor: pointer;
-}
-
-.scrollable {
-  overflow-y: scroll;
-}
-
-.bg-main {
-  background-image: url("/images/bg.jpg");
-  background-color: rgba(239, 239, 239, 0.75);
-  background-blend-mode: lighten;
-}/*# sourceMappingURL=app.css.map */
