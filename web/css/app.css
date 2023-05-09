@@ -1,3 +1,10 @@
 #message-request {
   display:none;
 }
+#pick-image {
+  display:none;
+}
+
+#player, #canvas {
+  display: none;
+}

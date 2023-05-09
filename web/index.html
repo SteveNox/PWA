@@ -47,6 +47,22 @@
     </div>
 
     <div class="container text-center">
+      <div class="row mt-2 m-2">
+        <video id="player" autoplay></video>
+        <canvas id="canvas" width="320px" height="240px"></canvas>
+        <button class="btn btn-sm btn-outline-secondary" type="button" id="capture-media-btn">Medienzugriff</button>
+        <input type="file" accept="image/*" id="pick-image">
+      </div>
+    </div>
+
+    <div class="container text-center">
+      <div class="row mt-2 m-2">
+        <input type="text" class="form-control" id="location"/>
+        <button class="btn btn-sm btn-outline-secondary" type="button" id="get-location-btn">Position</button>
+      </div>
+    </div>
+
+    <div class="container text-center">
       <div class="row mt-2 m-2" id="orderEntries">
       </div>
     </div>

@@ -11,15 +11,41 @@ var logger = {
   }
 }
 
+//media polyfill
+function initializeMedia() {
+  if(!('mediaDevices' in navigator)) {
+    navigator.mediaDevices = {};
+  }  
+
+  if (!('getUserMedia' in navigator.mediaDevices)) {
+    navigator.mediaDevices.getUserMedia = function(constraints) {
+      var getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+
+      if (!getUserMedia) {
+        return Promise.reject(new Error('getUserMedia not implemented!'));
+      }
+
+      return new Promise(function(resolve, reject) {
+        getUserMedia.call(navigator, constraints, resolve, reject);
+      });
+    }
+  }
+
+  navigator.mediaDevices.getUserMedia({video: true})
+    .then(function(stream) {
+      loglist.videoPlayer.srcObject = stream;
+      loglist.videoPlayer.style.display = 'block';
+    })
+    .catch(function(err) {
+      loglist.imagePicker.style.display = 'block';
+    });
+}
+
 var loglist = {
   items : [],   // current loglist  list
   inputForm: null,
   addButton: null,
   messageButton: null,
-  reportedAt: null, 
-  licensePlate: null, 
-  description: null, 
-  picture: null,
 
   init : () => {
     loglist.inputForm = document.getElementById('orderForm');
@@ -31,10 +57,19 @@ var loglist = {
     loglist.lieferant = document.getElementById('lieferant');
     loglist.lieferadresse = document.getElementById('lieferadresse');
     loglist.bestellungsinhalt = document.getElementById('bestellungsinhalt');
+    
+    loglist.videoPlayer = document.getElementById('player');
+    loglist.canvas = document.getElementById('canvas');
+    loglist.captureButton = document.getElementById('capture-media-btn');
+    loglist.imagePicker = document.getElementById('pick-image');
+
     loglist.key = Date.now().toString(36) + Math.random().toString(36);
     loglist.inputForm.onsubmit = loglist.add;
     loglist.addButton.disabled = false;
-    
+
+    initializeMedia();
+
+
     if ('Notification' in window) {
     //if ('Notification' in window && 'serviceWorker' in navigator) { //for push
       loglist.messageButton.style.display='inline-block';
